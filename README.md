@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Replication code for the article<br>
+
   <em>Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices</em><br>
   [Authors] · Manuscript in preparation
 </p>
