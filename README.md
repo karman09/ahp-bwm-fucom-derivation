@@ -10,7 +10,7 @@
 <p align="center">
   Replication code for the article<br>
   <em>Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices</em><br>
-  [Authors] · <em>Omega – The International Journal of Management Science</em> (under review)
+  [Authors] · Manuscript in preparation
 </p>
 
 ---
@@ -178,12 +178,11 @@ cell. Numbers in brackets refer to the [References](#references) below.
 If you use this code, please cite the article and the archived software:
 
 ```bibtex
-@article{deriving_bwm_fucom_2026,
+@unpublished{deriving_bwm_fucom_2026,
   title   = {Deriving {BWM} and {FUCOM} Weights from {AHP} Pairwise Comparison Matrices},
   author  = {[Authors]},
-  journal = {Omega},
   year    = {2026},
-  note    = {Under review}
+  note    = {Manuscript in preparation}
 }
 
 @software{deriving_bwm_fucom_code_2026,
