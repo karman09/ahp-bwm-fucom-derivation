@@ -2,9 +2,6 @@
 
 <p align="center">
   <a href="https://colab.research.google.com/drive/1dEuys0Bm5n13cdiKV5DtF6CPaH8hKXqG?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
-  <a href="https://doi.org/10.5281/zenodo.&lt;id&gt;"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.%3Cid%3E.svg" alt="DOI"></a>
-  <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License"></a>
 </p>
 
 <p align="center">
