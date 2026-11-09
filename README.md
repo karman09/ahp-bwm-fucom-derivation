@@ -6,8 +6,7 @@
 
 <p align="center">
 
-  <em>Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices</em><br>
-  [Authors] · Manuscript in preparation
+
 </p>
 
 ---
