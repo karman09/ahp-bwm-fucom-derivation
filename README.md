@@ -1,12 +1,11 @@
 <h1 align="center">Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices</h1>
 
 <p align="center">
-  <a href="https://colab.research.google.com/drive/1P5HnzU8ApehTQN0Zr5Q8mS8_vnZmns6g?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+  <a href="https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
 </p>
 
 <p align="center">
-
-
+Code and data accompanying the article <i>Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices: Analytical Properties and Decision-Level Robustness</i>.
 </p>
 
 ---
@@ -36,9 +35,13 @@ others.
 This repository implements a framework that derives BWM and FUCOM weights directly from an existing AHP matrix
 and evaluates the derivation analytically, on published data and by simulation. It enables analysts to
 
-- obtain a **multi-method robustness check** from existing AHP data without additional elicitation,
+- run an **internal sensitivity check** on an AHP-based decision without additional elicitation, i.e. test whether
+  the recommended alternative changes when only the best row and the worst column of the matrix are retained,
 - **locate inconsistency** in the judgements involving the best and worst criteria, and
 - **re-analyse and audit** published AHP-based weightings.
+
+The framework is not proposed as a substitute for BWM or FUCOM when elicitation starts from scratch: the extracted
+models use only 2*n* − 3 (BWM) and *n* − 1 (FUCOM) of the *n*(*n* − 1)/2 judgements of the AHP matrix.
 
 ## Framework
 
@@ -57,19 +60,20 @@ flowchart LR
 |---|---|
 | 1 | Check positivity and reciprocity of the published matrix |
 | 2 | Principal-eigenvector weights and consistency ratio (Saaty, 1990) |
-| 3 | B = criterion with the largest AHP weight, W = criterion with the smallest |
+| 3 | B = criterion with the largest AHP weight, W = criterion with the smallest (ties: lowest index) |
 | 4a | Best-to-Others = row B, Others-to-Worst = column W; linear (Rezaei, 2016) and non-linear (Rezaei, 2015) BWM |
-| 4b | FUCOM ranking and comparative priorities from row B (Pamučar et al., 2018) |
+| 4b | FUCOM ranking and comparative priorities from row B (Pamučar et al., 2018); closed-form solution *w*<sub>j</sub> = (1/*a*<sub>Bj</sub>) / Σ<sub>i</sub>(1/*a*<sub>Bi</sub>) |
 | 5 | Pearson r, Spearman ρ, WS coefficient, MAE and maximum absolute deviation |
 
 ## Main findings
 
 | Analysis | Result |
 |---|---|
-| Analytical properties | The extracted FUCOM model is always fully consistent (χ\* = 0) and reduces to the normalised reciprocals of the best-row entries. The extracted BWM model is fully consistent if and only if the best row and worst column satisfy multiplicative transitivity. |
-| Seven published cases | Derived weights agree with separately elicited weights (BWM: mean r = 0.952; FUCOM: mean r = 0.976). Divergences are traced to different input judgements, the BWM model variant and the comparisons not used by the extracted models. |
+| Analytical properties | The extracted FUCOM model is always fully consistent (χ\* = 0) and reduces to the normalised reciprocals of the best-row entries. The extracted BWM model is fully consistent if and only if the best row and worst column satisfy multiplicative transitivity. The FUCOM solution is feasible for the BWM model and therefore gives an a priori upper bound on the optimal BWM deviation. |
+| Seven published cases | Derived weights agree with separately elicited weights (mean Pearson r: BWM 0.952, FUCOM 0.976; 0.940 and 0.970 excluding the fully consistent Case 1). The derived weights deviate from the separately elicited ones by an amount of the same order as the plain AHP weights (mean MAE 0.0295 vs. 0.0242, Case 1 excluded). Divergences are traced to different input judgements, the BWM model variant and the comparisons not used by the extracted models. |
 | Monte Carlo simulation (18,000 matrices) | Reliable for AHP CR < 0.05 (median r ≥ 0.98 with the AHP weights), generally adequate up to 0.10, less reliable beyond. |
-| Input-based consistency | Vectors extracted from acceptable AHP matrices (CR < 0.10) exceed the BWM thresholds of Liang et al. (2020) in 42.1% of cases. |
+| Decision level (CR < 0.10) | The derived weights select the same best alternative as the AHP weights in 90.2% (BWM) and 87.1% (FUCOM) of simulated decisions, at a mean value loss of 0.55% and 0.68% (AHP: 0.27%). For initial score margins above 0.10, the rate exceeds 99.7%. |
+| Input-based consistency | Vectors extracted from acceptable AHP matrices (CR < 0.10) exceed the BWM thresholds of Liang et al. (2020) in 42.1% of cases; reference values for extracted vectors (median 0.25, 90th percentile 0.875 over all *n*) are provided in the article. |
 
 ## Quick start
 
@@ -77,7 +81,7 @@ flowchart LR
 
 Open the notebook and select **Runtime → Run all**:
 
-**[https://colab.research.google.com/drive/1dEuys0Bm5n13cdiKV5DtF6CPaH8hKXqG](https://colab.research.google.com/drive/1dEuys0Bm5n13cdiKV5DtF6CPaH8hKXqG?usp=sharing)**
+**[https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0](https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0?usp=sharing)**
 
 The notebook in this repository can also be opened directly from GitHub:
 [`run_in_colab.ipynb`](https://colab.research.google.com/github/karman09/ahp-bwm-fucom-derivation/blob/main/run_in_colab.ipynb).
@@ -100,7 +104,7 @@ python robustness_analyses.py       # robustness analyses and Monte Carlo simula
 ```text
 ahp-bwm-fucom-derivation/
 ├── bwm_fucom_derivation.py   # MCDM_Extractor class, case data, agreement measures, Tables 1–5, A1–A8, B1–B7, Figs. 1–3
-├── robustness_analyses.py    # Input-based CR, sensitivity to B and W, Monte Carlo simulation, Table 6, Table A9, Fig. 4
+├── robustness_analyses.py    # Input-based CR, sensitivity to B and W (Table A9), Monte Carlo simulation and decision-level analysis (Tables 6–9), Fig. 4
 ├── run_in_colab.ipynb        # Runs both scripts in Google Colab
 ├── requirements.txt          # numpy, scipy, pandas, matplotlib, openpyxl
 ├── LICENSE
@@ -111,43 +115,58 @@ ahp-bwm-fucom-derivation/
 
 | File | Content |
 |---|---|
-| `BWM_FUCOM_Derivation_Report.xlsx` | Summary, manuscript tables and one sheet per case |
-| `Robustness_Report.xlsx` | `InputCR`, `BW_Sensitivity`, `Simulation_Summary`, `Simulation_Raw`, `Simulation_Ties` |
+| `BWM_FUCOM_Derivation_Report.xlsx` | `Summary`, `Manuscript_Tables` and one sheet per case (`Case 1` – `Case 7`) |
+| `Robustness_Report.xlsx` | `InputCR`, `BW_Sensitivity`, `Simulation_Summary`, `Simulation_Table7`, `Simulation_Table8`, `Simulation_Decision`, `Simulation_Boundary`, `Simulation_Raw`, `Simulation_Ties` |
 | `Figure_1` – `Figure_3`, `figure_simulation` | Manuscript figures (SVG, PDF, PNG; TIFF for Figures 1–3) |
 | `figure_case1.png` – `figure_case7.png` | Diagnostic figure for each case |
+
+Note: formula cells in `BWM_FUCOM_Derivation_Report.xlsx` (Pearson r, absolute differences, MAE, etc.) are
+calculated when the workbook is opened in Excel or LibreOffice; viewers that do not recalculate may show them as empty.
 
 ## Published cases
 
 All matrices and reported weights were transcribed from the tables of the source studies and checked cell by
-cell. Numbers in brackets refer to the [References](#references) below.
+cell. Numbers in brackets refer to the [References](#references) below. CR is the AHP consistency ratio recomputed
+from the matrix as used.
 
-| Case | Application | n | Reported methods | Source tables | Source |
-|:---:|---|:---:|---|---|:---:|
-| 1 | Resource allocation in cloud computing | 8 | AHP, BWM, FUCOM | Tables 4, 6 (Example 3) | [1], [2] |
-| 2 | Car purchase | 5 | AHP, BWM, FUCOM | Tables 7, 9 (Example 4) | [1], [3] |
-| 3 | Smart-city components | 6 | AHP, BWM, FUCOM | Tables 8, 10, 13, 15 | [4] |
-| 4 | Beekeeping land suitability, Mardin (Türkiye) | 9 | AHP, FUCOM | Tables 3, 4, 5 | [5] |
-| 5 | Ranking of Libyan airlines | 5 | AHP, FUCOM | Tables 1, 2, 3 | [6] |
-| 6 | Wind-farm site selection, Libya | 6 | AHP, BWM | Tables 2, 3, 4, 6 | [7] |
-| 7 | Flash-flood susceptibility, Ibar basin (Montenegro) | 6 | AHP, BWM | Tables 6, 7 | [8] |
+| Case | Application | n | Reported methods | Source tables | CR | Source |
+|:---:|---|:---:|---|---|:---:|:---:|
+| 1 | Resource allocation in cloud computing | 8 | AHP, BWM, FUCOM | Tables 4, 6 (Example 3) | 0.000 | [1], [2] |
+| 2 | Car purchase | 5 | AHP, BWM, FUCOM | Tables 7, 9 (Example 4) | 0.028 | [1], [3] |
+| 3 | Smart-city components | 6 | AHP, BWM, FUCOM | Tables 8, 10, 13, 15 | 0.009 | [4] |
+| 4 | Beekeeping land suitability, Mardin (Türkiye) | 9 | AHP, FUCOM | Tables 4, 5 | 0.048 | [5] |
+| 5 | Ranking of Libyan airlines | 5 | AHP, FUCOM | Tables 1, 2, 3 | 0.010 | [6] |
+| 6 | Wind-farm site selection, Libya | 6 | AHP, BWM | Tables 2, 3, 4, 6 | 0.025 | [7] |
+| 7 | Flash-flood susceptibility, Ibar basin (Montenegro) | 6 | AHP, BWM | Tables 6, 7 | 0.062 | [8] |
 
 **Data notes**
 
+- **General.** Matrices are used as published. Reciprocals of Saaty-scale integers printed in rounded form in the
+  sources (e.g. 0.333, 0.143) are entered as exact fractions (1/3, 1/7).
 - **Case 1.** The source prints a₂₃ = 4 and a₃₂ = 1/4, a transposition that yields CR = 0.105 and does not
-  reproduce the reported AHP weights; the entries are used as a₂₃ = 1/4 and a₃₂ = 4.
-- **Case 3.** The reported BWM and FUCOM weights are the arithmetic means of the three experts' weights.
+  reproduce the reported AHP weights; the entries are used as a₂₃ = 1/4 and a₃₂ = 4. After the correction the
+  matrix is fully consistent (CR = 0.000).
+- **Case 2.** The reported BWM and FUCOM weights derive from the Best-to-Others vector (2, 1, 4, 2, 8) of
+  Rezaei (2016), not from the AHP matrix.
+- **Case 3.** The reported BWM and FUCOM weights are the arithmetic means of the three experts' weights. The group
+  matrix is used as published (both triangles rounded to two decimals).
+- **Cases 4 and 5.** The sources report their FUCOM priorities directly; these differ from the best rows of the
+  AHP matrices. In Case 5 the AHP weights of the source's Table 3 are used.
 - **Case 6.** The AHP matrix is the unweighted element-wise geometric mean of the four experts' matrices; the BWM
   weights are compared using the non-linear model stated in the source.
+- **Case 7.** The source elicited its BWM inputs separately from the AHP matrix.
 
 ## Reproducibility
 
 - The Monte Carlo simulation uses a fixed random seed (`SEED = 2026`); all values reported in the article are
   reproduced exactly.
-- The simulation (6 × 6 × 500 = 18,000 matrices) takes a few minutes on a standard machine or in Colab.
+- The simulation (6 × 6 × 500 = 18,000 matrices: *n* = 4–9, six perturbation levels, 500 matrices each) takes a
+  few minutes on a standard machine or in Colab.
 - `robustness_analyses.py` imports the extractor and the case data from `bwm_fucom_derivation.py`; both files
   must be in the same folder.
 - Linear programmes are solved with the HiGHS solver through `scipy.optimize.linprog`; the non-linear BWM is
-  solved exactly by bisection on ξ.
+  solved exactly by bisection on ξ; the FUCOM model is additionally solved numerically (SLSQP) to confirm the
+  closed-form solution.
 
 ## References
 
@@ -175,10 +194,10 @@ If you use this code, please cite the article and the archived software:
 
 ```bibtex
 @unpublished{deriving_bwm_fucom_2026,
-  title   = {Deriving {BWM} and {FUCOM} Weights from {AHP} Pairwise Comparison Matrices},
+  title   = {Deriving {BWM} and {FUCOM} Weights from {AHP} Pairwise Comparison Matrices: Analytical Properties and Decision-Level Robustness},
   author  = {[Authors]},
   year    = {2026},
-  note    = {Manuscript in preparation}
+  note    = {Manuscript under review}
 }
 
 @software{deriving_bwm_fucom_code_2026,
