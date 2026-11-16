@@ -2,27 +2,42 @@
 """
 Robustness analyses for the derivation of BWM and FUCOM weights from AHP matrices.
 
-Companion to the main script (MAIN_SCRIPT below), from which the MCDM_Extractor class,
-the agreement measures and the seven published cases are loaded.
+Companion to the main script (Part 1), from which the MCDM_Extractor class, the
+agreement measures and the seven published cases are loaded.
 
 Analyses
-  A. Input-based consistency ratio (Liang, Brunelli & Rezaei, 2020) of the extracted
-     Best-to-Others / Others-to-Worst vectors, with the corresponding thresholds.
+  A. Input-based consistency ratio (Liang, Brunelli & Rezaei, 2020, Eq. 7) of the
+     extracted Best-to-Others / Others-to-Worst vectors, with the thresholds of
+     Table 3 of that study. CR^I = 0 when a_BW = 1; it is undefined when a_BW < 1.
   B. Sensitivity to the choice of the best and worst criteria: each case is re-solved
      with the second-best criterion as B or the second-worst criterion as W.
   C. Monte Carlo simulation: random AHP matrices of known weights are perturbed,
      rounded to the Saaty scale, and the derived BWM (linear) and FUCOM (closed form,
      Eq. 8) weights are compared with the AHP weights and with the generating weights.
+  D. Decision analysis on the simulated matrices: for each matrix a random decision
+     matrix (N_ALT alternatives, performance values ~ U(0, 1), separate random stream)
+     is ranked by simple additive weighting with the generating, AHP, BWM and FUCOM
+     weights. Reported: agreement of the selected alternative with AHP and with the
+     generating weights, relative value loss, the effect of the AHP score margin
+     between the two best alternatives, reference values of the input-based
+     consistency ratio, and the frequency of boundary cases (a_BW <= 1, a_Bj < 1,
+     a_jW < 1).
+
+Reproducibility
+  The AHP matrices are generated with seed SEED and the decision matrices with seed
+  SEED_DM, from independent streams; analyses A-C therefore do not depend on D.
 
 Outputs
   Console report, figure_simulation.svg/.pdf/.png and Robustness_Report.xlsx
-  (sheets: InputCR, BW_Sensitivity, Simulation_Summary, Simulation_Raw, Simulation_Ties).
+  (sheets: InputCR, BW_Sensitivity, Simulation_Summary, Simulation_Table7,
+  Simulation_Table8, Simulation_Decision, Simulation_Boundary, Simulation_Raw,
+  Simulation_Ties).
 """
 import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import rankdata
+from scipy.stats import rankdata, spearmanr
 
 warnings.filterwarnings("ignore")
 
@@ -31,7 +46,7 @@ warnings.filterwarnings("ignore")
 #    Only the part before the console report is executed, so that the main script's
 #    figures and Excel report are not regenerated.
 # --------------------------------------------------------------------------- #
-MAIN_SCRIPT = "bwm_fucom_derivation.py"   # file name of the main script (if not run beforehand)
+MAIN_SCRIPT = "bwm_fucom_derivation.py"   # file name of the main script (if Part 1 was not run beforehand)
 MARKER = "# 2) CONSOLE REPORT"
 
 if all(k in globals() for k in ("MCDM_Extractor", "all_metrics", "EXAMPLES")):
@@ -52,11 +67,15 @@ else:
     EXAMPLES = _ns["EXAMPLES"]
 
 SEED = 2026
+SEED_DM = 7                                   # separate stream for the decision matrices
 N_REP = 500                                   # matrices per (n, sigma) cell
 N_VALUES = [4, 5, 6, 7, 8, 9]
 SIGMAS = [0.05, 0.15, 0.25, 0.35, 0.50, 0.70]  # s.d. of the log-normal perturbation
 CR_BINS = [(0.00, 0.05), (0.05, 0.10), (0.10, 0.20), (0.20, np.inf)]
 CR_LABELS = ["< 0.05", "0.05–0.10", "0.10–0.20", "≥ 0.20"]
+N_ALT = 8                                     # alternatives in the random decision matrix
+MARGIN_BINS = [0.00, 0.02, 0.05, 0.10, np.inf]
+MARGIN_LABELS = ["0.00–0.02", "0.02–0.05", "0.05–0.10", "> 0.10"]
 
 
 # ============================================================================ #
@@ -75,8 +94,11 @@ CRI_THRESHOLDS = {
 
 
 def input_based_cr(bo, ow, b_idx, w_idx):
-    """CR^I = max_j |a_Bj a_jW - a_BW| / (a_BW (a_BW - 1)); CR^I = 0 if a_BW = 1."""
+    """CR^I = max_j |a_Bj a_jW - a_BW| / (a_BW (a_BW - 1)); CR^I = 0 if a_BW = 1;
+    undefined (NaN) if a_BW < 1, where the denominator is negative."""
     a_bw = bo[w_idx]
+    if a_bw < 1.0 - 1e-9:
+        return np.nan
     if abs(a_bw - 1.0) < 1e-9:
         return 0.0
     return float(np.max(np.abs(bo * ow - a_bw)) / (a_bw * (a_bw - 1.0)))
@@ -204,6 +226,9 @@ def ws_coef(calc, ref, decimals=4):
 
 
 rng = np.random.default_rng(SEED)
+# Separate stream for the decision matrices, so that the simulated AHP matrices (and all
+# results of analysis C) are identical to those obtained without the decision analysis.
+rng_dm = np.random.default_rng(SEED_DM)
 sim, tie_rows = [], []
 for n in N_VALUES:
     for sigma in SIGMAS:
@@ -220,6 +245,18 @@ for n in N_VALUES:
             a_bw = float(e.bo_vector[w_idx])
             cri = input_based_cr(e.bo_vector, e.ow_vector, b_idx, w_idx)
             thr = cri_threshold(a_bw, n) if a_bw >= 1 - 1e-9 else np.nan
+
+            # D) Decision analysis: simple additive weighting on a random decision matrix
+            X = rng_dm.uniform(0.0, 1.0, size=(N_ALT, n))
+            v_true, v_ahp = X @ w_true, X @ w_ahp
+            best_true, best_ahp = int(np.argmax(v_true)), int(np.argmax(v_ahp))
+            v_bwm, v_fuc = X @ w_bwm, X @ w_fuc
+            best_bwm, best_fuc = int(np.argmax(v_bwm)), int(np.argmax(v_fuc))
+            v_sorted = np.sort(v_ahp)
+
+            def loss(k):
+                """Relative loss of true value when alternative k is chosen."""
+                return float((v_true[best_true] - v_true[k]) / v_true[best_true])
             sim.append({
                 "n": n, "sigma": sigma, "CR": e.ahp_cr, "xi_L": xi, "CR_I": cri, "CR_I_thr": thr,
                 "CR_I_ok": (cri <= thr) if not np.isnan(thr) else np.nan,
@@ -231,6 +268,16 @@ for n in N_VALUES:
                 "MAEtrue_AHP": np.mean(np.abs(w_ahp - w_true)),
                 "MAEtrue_BWM": np.mean(np.abs(w_bwm - w_true)),
                 "MAEtrue_FUCOM": np.mean(np.abs(w_fuc - w_true)),
+                "aBW_le_1": bool(a_bw <= 1.0 + 1e-9),
+                "aBj_lt_1": bool(np.any(e.bo_vector < 1.0 - 1e-9)),
+                "ajW_lt_1": bool(np.any(e.ow_vector < 1.0 - 1e-9)),
+                "margin_AHP": float(v_sorted[-1] - v_sorted[-2]),
+                "same_best_BWM": best_bwm == best_ahp, "same_best_FUCOM": best_fuc == best_ahp,
+                "loss_AHP": loss(best_ahp), "loss_BWM": loss(best_bwm), "loss_FUCOM": loss(best_fuc),
+                "true_best_AHP": best_ahp == best_true, "true_best_BWM": best_bwm == best_true,
+                "true_best_FUCOM": best_fuc == best_true,
+                "rho_alt_BWM": float(spearmanr(v_bwm, v_ahp)[0]),
+                "rho_alt_FUCOM": float(spearmanr(v_fuc, v_ahp)[0]),
             })
             # Ties: re-derive the weights with every admissible (B, W) pair among the tied criteria
             if len(e.best_criteria) > 1 or len(e.worst_criteria) > 1:
@@ -271,6 +318,56 @@ sum_n_bin = summarise(df_sim, ["n", "CR_bin"])
 sum_acc = summarise(df_sim[df_sim["CR"] < 0.10], ["n"])
 df_tie = pd.DataFrame(tie_rows)
 
+# D) Decision analysis and boundary cases, acceptable matrices (CR < 0.10)
+df_acc = df_sim[df_sim["CR"] < 0.10].copy()
+df_boundary = pd.DataFrame([
+    {"Condition": "a_BW <= 1", "N": int(df_acc["aBW_le_1"].sum())},
+    {"Condition": "a_Bj < 1 for some j", "N": int(df_acc["aBj_lt_1"].sum())},
+    {"Condition": "a_jW < 1 for some j", "N": int(df_acc["ajW_lt_1"].sum())},
+    {"Condition": "Matrices with CR < 0.10", "N": len(df_acc)},
+])
+df_acc["margin_bin"] = pd.cut(df_acc["margin_AHP"], bins=MARGIN_BINS, labels=MARGIN_LABELS, right=False)
+
+rows_dec = []
+for label, g in df_acc.groupby("margin_bin", observed=True):
+    rec = {"Score margin (AHP)": label, "N": len(g)}
+    for m in ("BWM", "FUCOM"):
+        ch = g[~g[f"same_best_{m}"]]            # matrices in which the best alternative changes
+        rec[f"Same best as AHP: {m} (%)"] = 100 * g[f"same_best_{m}"].mean()
+        rec[f"n changed: {m}"] = len(ch)
+        rec[f"Value loss when changed: {m} (%)"] = 100 * ch[f"loss_{m}"].mean() if len(ch) else np.nan
+        rec[f"AHP value loss, same matrices: {m} (%)"] = 100 * ch["loss_AHP"].mean() if len(ch) else np.nan
+    rows_dec.append(rec)
+df_dec = pd.DataFrame(rows_dec)
+
+
+# Table 7: decisions supported by the derived and the AHP weights, by consistency class
+def decision_row(label, g):
+    rec = {"AHP CR": label, "N": len(g)}
+    for m in ("BWM", "FUCOM"):
+        rec[f"Same best as AHP: {m} (%)"] = 100 * g[f"same_best_{m}"].mean()
+    for m in ("AHP", "BWM", "FUCOM"):
+        rec[f"True best: {m} (%)"] = 100 * g[f"true_best_{m}"].mean()
+    for m in ("AHP", "BWM", "FUCOM"):
+        rec[f"Value loss: {m} (%)"] = 100 * g[f"loss_{m}"].mean()
+    for m in ("BWM", "FUCOM"):
+        rec[f"Median Spearman rho of alternatives: {m}"] = g[f"rho_alt_{m}"].median()
+    return rec
+
+
+df_t7 = pd.DataFrame([decision_row(lab, g) for lab, g in df_sim.groupby("CR_bin", observed=True)]
+                     + [decision_row("< 0.10 (all)", df_acc)])
+df_t7n = pd.DataFrame([decision_row(f"< 0.10, n = {nn}", g) for nn, g in df_acc.groupby("n")])
+
+# Table 8: reference values of the input-based consistency ratio (CR < 0.10)
+def cri_row(label, g):
+    v = g["CR_I"].dropna()
+    return {"n": label, "N": len(v), "Median": v.median(),
+            "90th percentile": v.quantile(0.90), "95th percentile": v.quantile(0.95)}
+
+
+df_t8 = pd.DataFrame([cri_row(nn, g) for nn, g in df_acc.groupby("n")] + [cri_row("All", df_acc)])
+
 # --------------------------------------------------------------------------- #
 # Console report
 # --------------------------------------------------------------------------- #
@@ -282,20 +379,30 @@ print("\n", "=" * 78, "\n B) Sensitivity to the choice of best and worst criteri
 print(df_sens.to_string(index=False))
 print("\n", "=" * 78, f"\n C) Simulation: {len(df_sim)} matrices "
       f"(n = {N_VALUES[0]}..{N_VALUES[-1]}, {N_REP} per n x sigma cell, seed {SEED})\n", "=" * 78)
-print(" Exact ties in B: %d, in W: %d, in B or W: %d of %d matrices"
-      % (df_sim.tie_B.sum(), df_sim.tie_W.sum(), (df_sim.tie_B | df_sim.tie_W).sum(), len(df_sim)))
+print(" Exact ties in B: %d, in W: %d, in B or W: %d of %d matrices" %
+      (df_sim.tie_B.sum(), df_sim.tie_W.sum(), (df_sim.tie_B | df_sim.tie_W).sum(), len(df_sim)))
 if len(df_tie):
     print(" Tied matrices: max |dw| across admissible (B, W) choices  "
-          "BWM median = %.4f, max = %.4f;  FUCOM median = %.4f, max = %.4f;  share with BWM |dw| < 1e-6 = %.3f"
-          % (df_tie.maxdev_BWM.median(), df_tie.maxdev_BWM.max(), df_tie.maxdev_FUCOM.median(),
+          "BWM median = %.4f, max = %.4f;  FUCOM median = %.4f, max = %.4f;  share with BWM |dw| < 1e-6 = %.3f" %
+          (df_tie.maxdev_BWM.median(), df_tie.maxdev_BWM.max(), df_tie.maxdev_FUCOM.median(),
              df_tie.maxdev_FUCOM.max(), (df_tie.maxdev_BWM < 1e-6).mean()))
     acc = df_tie[df_tie.CR < 0.10]
-    print(" Tied matrices with CR < 0.10 (N = %d): BWM median = %.4f, p90 = %.4f; FUCOM median = %.4f, p90 = %.4f"
-          % (len(acc), acc.maxdev_BWM.median(), acc.maxdev_BWM.quantile(0.9),
+    print(" Tied matrices with CR < 0.10 (N = %d): BWM median = %.4f, p90 = %.4f; FUCOM median = %.4f, p90 = %.4f" %
+          (len(acc), acc.maxdev_BWM.median(), acc.maxdev_BWM.quantile(0.9),
              acc.maxdev_FUCOM.median(), acc.maxdev_FUCOM.quantile(0.9)))
 print("\n By CR class (all n):\n" + sum_bin.to_string(index=False))
 print("\n By n and CR class:\n" + sum_n_bin.to_string(index=False))
 print("\n Acceptable matrices (CR < 0.10), by n:\n" + sum_acc.to_string(index=False))
+
+print("\n Boundary cases among matrices with CR < 0.10:\n" + df_boundary.to_string(index=False))
+f2 = lambda v: f"{v:.2f}"
+f3 = lambda v: f"{v:.3f}"
+print(f"\n D) Decision analysis ({N_ALT} alternatives, simple additive weighting, seed {SEED_DM})")
+print("\n Table 7. Decisions by consistency class:\n" + df_t7.to_string(index=False, float_format=f2))
+print("\n Decisions for CR < 0.10, by n:\n" + df_t7n.to_string(index=False, float_format=f2))
+print("\n Table 8. Input-based consistency ratio, CR < 0.10:\n" + df_t8.to_string(index=False, float_format=f3))
+print(f"\n Table 9. Effect of the AHP score margin (CR < 0.10, N = {len(df_acc)}):\n"
+      + df_dec.to_string(index=False, float_format=f2))
 
 # ============================================================================ #
 # Figure (drawn at its printed size, 15 cm wide, so that fonts appear at their
@@ -361,6 +468,11 @@ with pd.ExcelWriter("Robustness_Report.xlsx", engine="openpyxl") as xw:
     ws.cell(row=1, column=1, value="By CR class (all n)")
     ws.cell(row=r2, column=1, value="Acceptable matrices (CR < 0.10), by n")
     ws.cell(row=r3, column=1, value="By n and CR class")
+    df_t7.to_excel(xw, sheet_name="Simulation_Table7", index=False)
+    df_t7n.to_excel(xw, sheet_name="Simulation_Table7", index=False, startrow=len(df_t7) + 3)
+    df_t8.to_excel(xw, sheet_name="Simulation_Table8", index=False)
+    df_dec.to_excel(xw, sheet_name="Simulation_Decision", index=False)
+    df_boundary.to_excel(xw, sheet_name="Simulation_Boundary", index=False)
     df_sim.to_excel(xw, sheet_name="Simulation_Raw", index=False)
     if len(df_tie):
         df_tie.to_excel(xw, sheet_name="Simulation_Ties", index=False)
