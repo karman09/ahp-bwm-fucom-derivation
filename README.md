@@ -81,7 +81,7 @@ flowchart LR
 
 Open the notebook and select **Runtime → Run all**:
 
-**[https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0](https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0?usp=sharing)**
+**https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0**
 
 ### Local installation
 
