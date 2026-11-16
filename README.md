@@ -1,7 +1,7 @@
 <h1 align="center">Deriving BWM and FUCOM Weights from AHP Pairwise Comparison Matrices</h1>
 
 <p align="center">
-  <a href="https://colab.research.google.com/drive/1dEuys0Bm5n13cdiKV5DtF6CPaH8hKXqG?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
+  <a href="https://colab.research.google.com/drive/1P5HnzU8ApehTQN0Zr5Q8mS8_vnZmns6g?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a>
 </p>
 
 <p align="center">
