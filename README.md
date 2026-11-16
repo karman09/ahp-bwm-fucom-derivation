@@ -83,9 +83,6 @@ Open the notebook and select **Runtime → Run all**:
 
 **[https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0](https://colab.research.google.com/drive/1zjGj5fbFd_URCVBaZStCUHvYoef0bPm0?usp=sharing)**
 
-The notebook in this repository can also be opened directly from GitHub:
-[`run_in_colab.ipynb`](https://colab.research.google.com/github/karman09/ahp-bwm-fucom-derivation/blob/main/run_in_colab.ipynb).
-
 ### Local installation
 
 Requires Python ≥ 3.10.
